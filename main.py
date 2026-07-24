@@ -10,6 +10,10 @@ class Task(BaseModel):
     task_description : Optional[str] = None
     task_status : bool = False
 
+class CreateTask(BaseModel):
+    task_name : str
+    task_description : Optional[str] = None
+
 tasks_db = [
     {"task_id": 1, "task_name": "Buy milk", "task_description": "2% from the store", "task_status": False},
     {"task_id": 2, "task_name": "Make Assignment", "task_description": "Make coding Assignment", "task_status": True},
@@ -30,9 +34,26 @@ def getAllTasks():
     return tasks_db
 
 
-@app.get('/tasks/{tasks_id}')
-def getTaskById(task_id : int):
+@app.get('/tasks/{task_id}')
+def getTaskById(task_id: int):
     for task in tasks_db:
         if task["task_id"] == task_id:
             return task
-        raise HTTPException(status_code=404, detail=f"Task {task_id} Not Found")
+    raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+
+@app.post('/tasks', status_code=201)
+def createTask(task : CreateTask):
+    if not task.task_name.strip():
+        raise HTTPException(status_code=400, detail="Task name required")
+    new_id = max([t["task_id"] for t in tasks_db]) + 1 if tasks_db else 1
+
+    new_task = {
+        "task_id" : new_id,
+        "task_name" : task.task_name,
+        "task_description" : task.task_description,
+        "task_status" : False,
+    }
+
+    tasks_db.append(new_task)
+    return new_task
+

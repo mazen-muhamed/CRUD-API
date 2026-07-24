@@ -13,11 +13,13 @@ class Task(BaseModel):
 class CreateTask(BaseModel):
     task_name : str
     task_description : Optional[str] = None
+    task_status : Optional[bool] = False
 
 tasks_db = [
-    {"task_id": 1, "task_name": "Buy milk", "task_description": "2% from the store", "task_status": False},
+    {"task_id": 1, "task_name": "Buy Groceries", "task_description": "2% from the store", "task_status": False},
     {"task_id": 2, "task_name": "Make Assignment", "task_description": "Make coding Assignment", "task_status": True},
     {"task_id": 3, "task_name": "Study AI", "task_description": "Build AI Agentic Model", "task_status": False}
+
 ]
 
 
@@ -56,4 +58,24 @@ def createTask(task : CreateTask):
 
     tasks_db.append(new_task)
     return new_task
+
+@app.put('/tasks/{task_id}')
+def updateTask(task_id: int, updated: CreateTask):
+    for task in tasks_db:
+        if task["task_id"] == task_id:
+            if not updated.task_name.strip():
+                raise HTTPException(status_code=400, detail="Task name required")
+            task["task_name"] = updated.task_name
+            task["task_description"] = updated.task_description
+            task["task_status"] = updated.task_status
+            return task
+    raise HTTPException(status_code=404, detail=f"Task {task_id} Not Found! ")
+
+@app.delete('/tasks/{task_id}', status_code=204)
+def deleteTask(task_id : int):
+    for task in tasks_db:
+        if task["task_id"] == task_id:
+            tasks_db.remove(task)
+            return {f"Task Removed {task_id}"}
+    raise HTTPException(status_code=404, detail=f"Task {task_id} Not Found! ")
 

@@ -1,27 +1,44 @@
 from fastapi import FastAPI, HTTPException
 from typing import Optional
 from pydantic import BaseModel
+from sqlmodel import SQLModel, Field, create_engine, Session, select
 
 app = FastAPI()
 
-class Task(BaseModel):
-    task_id : int
+
+class Task(SQLModel, table=True):
+    task_id : int = Field(default=None, primary_key=True)
     task_name : str
     task_description : Optional[str] = None
     task_status : bool = False
 
-class CreateTask(BaseModel):
+class CreateTask(SQLModel):
     task_name : str
     task_description : Optional[str] = None
     task_status : Optional[bool] = False
 
-tasks_db = [
-    {"task_id": 1, "task_name": "Buy Groceries", "task_description": "2% from the store", "task_status": False},
-    {"task_id": 2, "task_name": "Make Assignment", "task_description": "Make coding Assignment", "task_status": True},
-    {"task_id": 3, "task_name": "Study AI", "task_description": "Build AI Agentic Model", "task_status": False}
+engine = create_engine(
+    "sqlite:///tasks.db",
+    connect_args={
+        "check_same_thread" : False})
 
-]
+def getSession():
+    with Session(engine) as session:
+        yield session
 
+@app.on_event("startup")
+def onStartup():
+    SQLModel.metadata.create_all(engine)
+
+    with Session(engine) as session:
+        existing = session.exec(select(Task)).all()
+        if len(existing) == 0:
+            session.add_all([
+                Task(task_name="Buy Groceries", task_description="2% from the store", task_status=False),
+                Task(task_name="Make Assignment", task_description="Make coding Assignment", task_status=True),
+                Task(task_name="Study AI", task_description="Build AI Agentic Model", task_status=False),
+            ])
+            session.commit()
 
 @app.get('/health')
 def health():
